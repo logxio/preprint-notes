@@ -25,10 +25,11 @@ header{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:40px 0 88
 header h1{font-size:22px;font-weight:800;letter-spacing:-.01em;flex:1}
 .gh{font:500 15px var(--mono)}
 .seg{position:relative;display:inline-flex;flex-wrap:wrap;max-width:100%;padding:3px;border-radius:2px;box-shadow:inset 0 0 0 1.5px var(--ink)}
-.seg i{position:absolute;top:3px;left:0;height:0;width:0;background:var(--ink);border-radius:1px}
-.seg.ready i{transition:transform var(--t) var(--ease),width var(--t) var(--ease),top var(--t) var(--ease),height var(--t) var(--ease)}
-.seg button{position:relative;z-index:1;padding:5px 14px;font:700 14.5px var(--mono);white-space:nowrap;transition:color var(--t) var(--ease)}
+.seg i{position:absolute;top:3px;left:0;height:0;width:0;background:var(--ink);border-radius:1px;opacity:0}
+.seg.anim i{opacity:1;transition:transform var(--t) var(--ease),width var(--t) var(--ease),top var(--t) var(--ease),height var(--t) var(--ease)}
+.seg button{position:relative;z-index:1;padding:5px 14px;font:700 14.5px var(--mono);white-space:nowrap;border-radius:1px;transition:color var(--t) var(--ease)}
 .seg button[aria-pressed=true]{color:var(--bg)}
+.seg:not(.anim) button[aria-pressed=true]{background:var(--ink)}
 h2{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-bottom:28px}
 section{margin-bottom:88px}
 .grid{display:grid;grid-template-columns:7fr 5fr;gap:48px}
@@ -137,11 +138,11 @@ section{margin-bottom:88px}
 
 <section aria-labelledby="h2s">
 <h2 id="h2s">60 arXiv HTML papers, November 2026</h2>
-<div class="stats"><div><b id="stMath"></b>math papers break</div><div><b id="stSent"></b>sentences unanchored</div><div><b id="stRest"></b>restored by MathML-clean</div></div>
-<div class="seg" id="filters" role="group" aria-label="Filter papers"><i></i><button data-f="all">All 60</button><button data-f="broken">45 Broken</button><button data-f="clean">4 Clean Math</button><button data-f="non">11 Non-Math</button></div>
+<div class="stats"><div><b id="stMath"></b>&lt;p&gt; math papers break</div><div><b id="stSent"></b>sentences unanchored</div><div><b id="stRest"></b>restored by MathML-clean</div></div>
+<div class="seg" id="filters" role="group" aria-label="Filter papers"><i></i><button data-f="all">All 60</button><button data-f="broken">45 Broken</button><button data-f="clean">4 Clean &lt;p&gt; Math</button><button data-f="non">11 No &lt;p&gt; Math</button></div>
 <svg id="wafer" viewBox="0 0 1200 200" tabindex="0" role="img" aria-label="60 papers; use arrow keys to inspect"></svg>
 <div class="axis"><span>2611.29982v1</span><span>height ∝ √ math sentences</span><span>2611.33106v1</span></div>
-<div class="legend"><span><i class="solid-h"></i>unanchored</span><span><i class="sw-c"></i>anchored</span><span><i class="sw-n"></i>no inline math</span></div>
+<div class="legend"><span><i class="solid-h"></i>unanchored</span><span><i class="sw-c"></i>anchored</span><span><i class="sw-n"></i>no &lt;p&gt; inline math</span></div>
 <div class="inspect" aria-live="polite"><a id="inTitle" href="#"></a><div class="meta"><span id="inId" class="cb"></span><span id="inCount"></span><span id="inState"></span></div></div>
 </section>
 
@@ -159,15 +160,16 @@ const root = document.documentElement;
 const slide = g => { const b = g.querySelector("[aria-pressed=true]"), i = g.querySelector("i"); if (!b || !i) return; i.style.width = b.offsetWidth + "px"; i.style.height = b.offsetHeight + "px"; i.style.top = b.offsetTop + "px"; i.style.transform = `translateX(${b.offsetLeft}px)`; };
 const syncSegs = () => $$(".seg").forEach(slide);
 addEventListener("resize", syncSegs); if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncSegs);
-requestAnimationFrame(() => requestAnimationFrame(() => $$(".seg").forEach(g => g.classList.add("ready"))));
+if (window.ResizeObserver) { const ro = new ResizeObserver(syncSegs); $$(".seg, .seg button").forEach(e => ro.observe(e)); }
+const arm = b => { const g = b.closest(".seg"); if (g && !g.classList.contains("anim")) { slide(g); void g.offsetWidth; g.classList.add("anim"); } };
 const press = (sel, on) => { $$(sel).forEach(b => b.setAttribute("aria-pressed", on(b))); const g = $$(sel)[0].closest(".seg"); if (g) slide(g); };
 const setTheme = t => { root.dataset.theme = t; localStorage.setItem("pn-theme", t); press("[data-theme-set]", b => b.dataset.themeSet === t); };
-$$("[data-theme-set]").forEach(b => b.onclick = () => setTheme(b.dataset.themeSet));
+$$("[data-theme-set]").forEach(b => b.onclick = () => { arm(b); setTheme(b.dataset.themeSet); });
 setTheme(root.dataset.theme);
 
 const paper = $("#paper"), s1 = $("#s1");
-const SKIP_RAW = "script, style, [hidden], .pid, .tex-xray";
-const SKIP_CLEAN = "script, style, [hidden], .pid, .tex-xray, annotation, annotation-xml";
+const SKIP_RAW = "script, style, [hidden], .cnd-card, .checks, .pid, .tex-xray";
+const SKIP_CLEAN = "script, style, [hidden], .cnd-card, .checks, .pid, .tex-xray, annotation, annotation-xml";
 paper.querySelectorAll("math").forEach(m => {
   const a = m.querySelector("annotation"); if (!a) return;
   const x = document.createElement("span"); x.className = "tex-xray"; x.setAttribute("aria-hidden", "true"); x.textContent = a.textContent; m.after(x);
@@ -180,17 +182,26 @@ let mode = "raw", quote = QUOTES[0];
 
 const norm = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ");
 const ALNUM = /[\p{L}\p{N}]/u;
-function textIndex(host, skip) {
+function textIndex(host, skip, cpSafe = true) {
   const nodes = [];
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
     acceptNode: n => (n.parentElement.closest(skip) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   let raw = "";
   for (let n; (n = walker.nextNode());) { nodes.push([n, raw.length]); raw += n.data; }
   let flat = "", map = [], space = true;
-  for (let i = 0; i < raw.length; i++) {
-    const c = raw[i].toLowerCase();
-    if (ALNUM.test(c)) { flat += c; map.push(i); space = false; }
-    else if (!space) { flat += " "; map.push(i); space = true; }
+  if (cpSafe) {
+    for (let i = 0; i < raw.length;) {
+      const cp = raw.codePointAt(i), ch = String.fromCodePoint(cp), step = ch.length, c = ch.toLowerCase();
+      if (ALNUM.test(c)) { for (let k = 0; k < c.length; k++) { flat += c[k]; map.push(i + Math.min(k, step - 1)); } space = false; }
+      else if (!space) { flat += " "; map.push(i); space = true; }
+      i += step;
+    }
+  } else {
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw[i].toLowerCase();
+      if (ALNUM.test(c)) { flat += c; map.push(i); space = false; }
+      else if (!space) { flat += " "; map.push(i); space = true; }
+    }
   }
   return { nodes, raw, flat, map };
 }
@@ -242,7 +253,7 @@ function alignRows(hitClean) {
 }
 function run() {
   const t0 = performance.now();
-  const iRaw = textIndex(paper, SKIP_RAW), iClean = textIndex(paper, SKIP_CLEAN);
+  const iRaw = textIndex(paper, SKIP_RAW, false), iClean = textIndex(paper, SKIP_CLEAN, true);
   const hRaw = find(iRaw, quote), hClean = find(iClean, quote);
   const ms = performance.now() - t0;
   const hit = mode === "raw" ? hRaw : hClean, idx = mode === "raw" ? iRaw : iClean, other = mode === "raw" ? hClean : hRaw;
@@ -257,7 +268,7 @@ function run() {
   else { $("#rowRaw").textContent = ""; $("#rowClean").textContent = ""; $("#ruler").textContent = ""; $("#alignFoot").textContent = "select at least 12 characters in the excerpt"; }
 }
 const setMode = m => { mode = m; s1.dataset.mode = m; press("[data-mode]", b => b.dataset.mode === m); run(); };
-$$("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$$("[data-mode]").forEach(b => b.onclick = () => { arm(b); setMode(b.dataset.mode); });
 const focusPara = i => { if (i == null) { delete paper.dataset.focus; } else paper.dataset.focus = i; paper.querySelectorAll(".para").forEach(p => p.classList.toggle("on", p.dataset.k === String(i))); };
 $$(".proof").forEach(b => {
   const i = +b.dataset.q;
@@ -278,14 +289,14 @@ document.addEventListener("selectionchange", () => { clearTimeout(tm); tm = setT
 $("#copy").onclick = () => { navigator.clipboard && navigator.clipboard.writeText("python3 preprint_note_check.py --demo").then(() => { $("#copyS").textContent = "copied"; setTimeout(() => $("#copyS").textContent = "copy", 1400); }); };
 setMode("raw");
 
-const D = [[29982,209,54],[29996,31,2],[30185,74,7],[30198,0,0,1],[30522,100,18],[30552,0,0,1],[30674,0,0,1],[30700,202,82],[30711,0,0,1],[30732,0,0,1],[30733,0,0,1],[30793,0,0,1],[31083,315,51],[31095,164,42],[31176,0,0,1],[31227,163,56],[31429,24,8],[31451,234,35],[31469,116,72],[31539,473,230],[31541,51,10],[31544,168,19],[31559,112,11],[31573,0,0,1],[31575,203,55],[31620,263,66],[31696,207,43],[31739,0,0,1],[31833,8,1],[31899,71,24],[31914,266,70],[31927,32,5],[31942,159,33],[31960,143,37],[31968,564,239],[32009,3,1],[32044,42,12],[32050,122,14],[32091,302,43],[32169,132,37],[32188,132,22],[32266,44,6],[32348,723,297],[32352,9,0],[32377,0,0,1],[32674,698,283],[32679,251,114],[32710,73,9],[32743,176,70],[32768,5,0],[32888,184,67],[32939,14,2],[32945,187,31],[32947,362,193],[32990,282,83],[33050,151,10],[33082,11,0],[33088,15,3],[33094,184,54],[33106,18,0]]
-  .map(([n, s, b, nm]) => ({ id: `2611.${n}v1`, s, b, math: !nm, k: nm ? "non" : b ? "broken" : "clean" }));
+const D = [[29982,209,54,54,55,55],[29996,31,2,2,2,2],[30185,74,7,7,7,7],[30198,0,0,0,0,0,1],[30522,100,18,18,18,18],[30552,0,0,0,0,0,1],[30674,0,0,0,0,0,1],[30700,202,82,82,88,88],[30711,0,0,0,0,0,1],[30732,0,0,0,0,0,1],[30733,0,0,0,0,0,1],[30793,0,0,0,0,0,1],[31083,315,51,51,51,51],[31095,164,42,42,42,42],[31176,0,0,0,0,0,1],[31227,163,56,56,59,59],[31429,24,8,8,8,8],[31451,234,35,35,35,35],[31469,116,72,72,78,78],[31539,473,230,230,263,263],[31541,51,10,10,10,10],[31544,168,19,19,19,19],[31559,112,11,11,11,11],[31573,0,0,0,0,0,1],[31575,203,55,55,58,58],[31620,263,66,66,79,79],[31696,207,43,43,44,44],[31739,0,0,0,0,0,1],[31833,8,1,1,1,1],[31899,71,24,24,24,24],[31914,266,70,70,76,76],[31927,32,5,5,5,5],[31942,159,33,33,33,33],[31960,143,37,37,37,37],[31968,564,239,239,245,245],[32009,3,1,1,1,1],[32044,42,12,12,12,12],[32050,122,14,14,15,15],[32091,302,43,43,43,43],[32169,132,37,37,37,37],[32188,132,22,22,22,22],[32266,44,6,6,6,6],[32348,723,297,297,297,297],[32352,9,0,0,0,0],[32377,0,0,0,0,0,1],[32674,698,283,283,293,293],[32679,251,114,114,118,118],[32710,73,9,9,9,9],[32743,176,70,70,74,74],[32768,5,0,0,0,0],[32888,184,67,67,67,67],[32939,14,2,2,2,2],[32945,187,31,31,33,33],[32947,362,193,193,199,199],[32990,282,83,83,85,85],[33050,151,10,10,10,10],[33082,11,0,0,0,0],[33088,15,3,3,3,3],[33094,184,54,54,56,56],[33106,18,0,0,0,0]]
+  .map(([n, s, b, r, bJ, rJ, nm]) => ({ id: `2611.${n}v1`, s, b, r, bJ, rJ, math: !nm, k: nm ? "non" : b ? "broken" : "clean" }));
 const TITLES = {"2611.31176v1": "Female YouTube Content Creators in Bangladesh: A Data-Driven Study of Audience and Sentiment", "2611.30793v1": "How Systems Treat Intent: A Faceted Taxonomy of Intent for Human-AI Co-Creation", "2611.30733v1": "Can Cities Have Personalities? Introducing the SCD City Personality Assessment", "2611.30711v1": "Handoff at Frontier AI Companies", "2611.30674v1": "The user who is not there: genealogy and critique of simulated users built with generative AI in UX testing", "2611.31620v1": "Bayesian Data Integration and Model Updating in Probabilistic Digital Twins", "2611.31573v1": "The Paradox of Agency-Preserving AI: Negotiating Learner Agency in Layered Human-AI Interactions", "2611.30732v1": "Complying with Cybersecurity Legislation: NIS2 Challenges and Industry Case Study", "2611.31227v1": "How Far Can Linear Go? BiPert, a Unified Framework for Single-Cell Perturbation Modelling", "2611.31899v1": "Beyond Average Gains: Probing the Equity-Vulnerability Tension in Structured Visual AI for Learning", "2611.31575v1": "Latent Channel Completion for Forecasting in Sensor Networks with Failed Detectors", "2611.31559v1": "COGENT: A Modular Cognitive Architecture for Agentic User Simulation", "2611.31544v1": "Airport-level runway-incursion rates normalized by movements: hierarchical shrinkage estimates, ranking uncertainty and severity for FAA-towered airports, FY2008-FY2024", "2611.31083v1": "AI-Assisted Programming and Labor Demand", "2611.30185v1": "Causal Evidence for the Emergence and Spread of Reward Hacking in AI Agent Swarms", "2611.31539v1": "Agent Evaluation Without Ground Truth: A Null Proportion Perspective", "2611.31429v1": "Leaks by Installments: Cross-Session Answer Disclosure in LLM Tutors and a Ledger-Based Defense", "2611.31541v1": "Where Agent Defenses Fail: A Case Study of Policy Compositions and Measurement Limits", "2611.29996v1": "MindBridge: A Multilingual and Multimodal Tool for Interactive Cognitive Monitoring", "2611.29982v1": "Verifying Declared AI Workloads from GPU Supply Current", "2611.30700v1": "Sequential Monitoring of Image Streams Using Energy Statistics", "2611.30198v1": "Geospatial foundation models and deep learning for climate resilience: a review of transfer, uncertainty and decision readiness", "2611.30552v1": "An Experimental Apparatus for Embodied Conversational AI: A Simple Implementation Coupling a Commercial Voice AI with an Avatar", "2611.30522v1": "Can LLMs Understand Human Rules?", "2611.31469v1": "Symbolic Proof Compression and Fractal Universality: A Conditional Non-Constructive Refutation of the Riemann Hypothesis", "2611.31451v1": "A multimodal foundation model for tissue proteomics and morphology in cancer", "2611.31833v1": "Not All Interpretation Methods Are Created Equal: Tiered Evaluation of AI Interpretability", "2611.31739v1": "Where is the Interface for the AI Harness?", "2611.31696v1": "Differential Item Functioning: Methodological Advances in Detection, Identification, and Interpretation", "2611.31095v1": "Tradeoffs between objective outcomes and human enjoyment of work in human-AI task allocation", "2611.32266v1": "Unjamming Deferrals: Supporting Students Through JAMN Bot, a Mobile RAG-Grounded Policy Assistant", "2611.31914v1": "Meta-Amortized Cognitive Modeling", "2611.32710v1": "Red-Teaming a Sovereign LLM, Its Reasoning and Its Training Stages", "2611.33094v1": "Bayesian Learning of Spatially Heterogeneous Causal Structure in Spatial Transcriptomics", "2611.32743v1": "Lattice models of chiral random motion: A short review", "2611.32050v1": "Do Clinician-Scored Examples Help LLMs Code ADOS-2 from Hour-Long Transcripts?", "2611.32377v1": "Found in Translation: Five Entry Points to Translate AI Literacy Frameworks in the Design of Educational Materials", "2611.31968v1": "Audits Need Access, Data, and Compute. But How Much?", "2611.31960v1": "Typical-query energy figures mislead institutional AI electricity demand", "2611.32945v1": "PHM-ensemble: Scalable and Stable Probabilistic Multiresolution Clustering via Ensemble Density Estimation", "2611.32768v1": "Emerging International Best Practices for AI Model Specs", "2611.32679v1": "Adaptive Multi-kernel Correntropy Kalman Filter: A Variational Bayesian Approach", "2611.32352v1": "Protective-Design Pre-Emption in Child-Facing Generative AI", "2611.33082v1": "Who decides the norms in TCS? Analysing the composition of the STOC 2027 committees and of the Simons Institute \"AI+TCS\" working group", "2611.32674v1": "Simultaneous Inference for Watermark Proportions in LLM-Generated Text", "2611.32009v1": "Calm Agent: Reframing Agent Interaction around Intermittent Human Attention", "2611.31942v1": "Beyond \"AI Can Make Mistakes\": How Risk Communication Shapes Trust and Decision Confidence for LLMs in Health Information Seeking", "2611.31927v1": "(No) Separation of Concerns: Philosophical Concerns about Agent Ethics and Implications for SE Practitioners", "2611.33088v1": "The Radar-based Activities of Daily Living (R-ADL) Dataset", "2611.32990v1": "Cell and nuclear shapes predict confined motility", "2611.32348v1": "Explaining intersectional segregation in multi-attribute social networks", "2611.32188v1": "Blaming the Machine, Billing the Victim? How Mock Jurors Reassign Fault from Generative AI Systems and Respond to Liability Cliffs in Tort", "2611.32169v1": "MyMuse: A Personal Museum for Post-Visit Inquiry and Reflection", "2611.32091v1": "How Fast Stored Household Assignments Go Stale: Evidence from North Carolina Voter Rolls", "2611.32044v1": "CHORAL: A Multi-Agent Scaffold for Longitudinal Prognostic Reasoning from Patient-Generated Health Data", "2611.33106v1": "Temporal Conditioning for Human Behavioral Cloning in Chess", "2611.33050v1": "Worth the Wait? How Response Time and Streaming Shape Judgments of Generative AI Answers and Chatbot Engagement", "2611.32947v1": "Online V-Learning with Adaptive Longitudinal Data", "2611.32939v1": "One Style Fits All? Cultural Values Embedded in Conversational AI via a People-Pleasing Lens", "2611.32888v1": "Generalizing Couple-Randomized Trials Under Limited Overlap and Missing Partner Linkage"};
 const mathN = D.filter(p => p.math).length, brokeN = D.filter(p => p.b > 0).length;
-const sS = D.reduce((a, p) => a + p.s, 0), sB = D.reduce((a, p) => a + p.b, 0);
+const sS = D.reduce((a, p) => a + p.s, 0), sB = D.reduce((a, p) => a + p.b, 0), sR = D.reduce((a, p) => a + p.r, 0);
 $("#stMath").textContent = `${brokeN}/${mathN} · ${(100 * brokeN / mathN).toFixed(1)}%`;
 $("#stSent").textContent = `${fmt(sB)}/${fmt(sS)}`;
-$("#stRest").textContent = `${fmt(sB)}/${fmt(sB)}`;
+$("#stRest").textContent = `${fmt(sR)}/${fmt(sB)}`;
 const svg = $("#wafer"), NS = "http://www.w3.org/2000/svg", W = 1200 / 60, BASE = 186, H = 168, MAX = Math.sqrt(723);
 const el = (t, a, host = svg) => { const e = document.createElementNS(NS, t); for (const k in a) ["fill", "stroke"].includes(k) ? e.style[k] = a[k] : e.setAttribute(k, a[k]); host.appendChild(e); return e; };
 const defs = document.createElementNS(NS, "defs"); defs.innerHTML = `<pattern id="whatch" width="4" height="4" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="4" style="stroke:var(--bg)" stroke-width="1.5" stroke-opacity="0.5"/></pattern>`; svg.appendChild(defs);
@@ -311,8 +322,8 @@ const show = i => {
   glow.style.transform = needle.style.transform = `translateX(${cur * W}px)`;
   const a = $("#inTitle"); a.textContent = TITLES[p.id]; a.href = `https://arxiv.org/html/${p.id}`;
   $("#inId").textContent = `arXiv:${p.id} · ${cur + 1}/60`;
-  $("#inCount").textContent = p.math ? `${fmt(p.b)} / ${fmt(p.s)} math sentences unanchored` : "no inline math";
-  $("#inState").textContent = !p.math ? "unaffected" : p.b ? "broken, 100% restored" : "math, anchored";
+  $("#inCount").textContent = p.math ? `${fmt(p.b)} / ${fmt(p.s)} <p> math sentences unanchored${p.bJ > p.b ? ` (+${p.bJ - p.b} UTF-16 splits in ef_notes.js)` : ""}` : "no <p> inline math";
+  $("#inState").textContent = !p.math ? "unaffected in <p> prose" : p.b ? `broken, ${fmt(p.r)}/${fmt(p.b)} restored` : "<p> math, anchored";
   $("#inState").className = !p.math ? "" : p.b ? "oc" : "cb";
 };
 const at = e => { const r = svg.getBoundingClientRect(); return Math.floor((e.clientX - r.left) / r.width * 60); };
@@ -323,7 +334,7 @@ svg.addEventListener("keydown", e => {
   if (e.key === "Enter") open(`https://arxiv.org/html/${D[cur].id}`, "_blank", "noopener");
 });
 const setFilter = f => { press("[data-f]", b => b.dataset.f === f); cols.forEach(g => g.classList.toggle("off", f !== "all" && g.dataset.k !== f)); };
-$$("[data-f]").forEach(b => b.onclick = () => setFilter(b.dataset.f));
+$$("[data-f]").forEach(b => b.onclick = () => { arm(b); setFilter(b.dataset.f); });
 setFilter("all");
 show(cur);
 

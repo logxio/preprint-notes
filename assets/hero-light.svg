@@ -21,7 +21,7 @@
 </g>
 <text x="64" y="226" class="m i" font-size="15" font-weight="500">find() span</text>
 <text x="64" y="278" class="m o" font-size="46" font-weight="700">null</text>
-<text x="556" y="226" text-anchor="end" class="m i" font-size="15" font-weight="500">math papers broken</text>
+<text x="556" y="226" text-anchor="end" class="m i" font-size="15" font-weight="500">&lt;p&gt; math papers broken</text>
 <text x="556" y="278" text-anchor="end" class="m o" font-size="40" font-weight="700">45/49</text>
 <text x="644" y="120" class="m i" font-size="16" font-weight="700">MathML-clean</text>
 <text x="1136" y="120" text-anchor="end" class="m c" font-size="15" font-weight="700">patched</text>

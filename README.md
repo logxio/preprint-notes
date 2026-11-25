@@ -1,15 +1,15 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
-  <img alt="preprint-notes: hidden LaTeXML annotation text breaks ef_notes.js quote anchors in 45 of 49 math papers; the MathML-clean index restores them" src="assets/hero-light.svg" width="1200">
+  <img alt="preprint-notes: hidden LaTeXML annotation text breaks ef_notes.js quote anchors in 45 of 49 prose-math papers; the MathML-clean index restores them" src="assets/hero-light.svg" width="1200">
 </picture>
 
 # preprint-notes
 
 Select any sentence in a real arXiv paper and watch the anchor break and get fixed live: [logxio.github.io/preprint-notes](https://logxio.github.io/preprint-notes/).
 
-`ef_notes.js` (lines 37 to 67 on `epistemic.fund/notes.js`) builds its DOM text index with `TreeWalker(NodeFilter.SHOW_TEXT)` and skips only `script, style, [hidden]`. On `arxiv.org/html` (LaTeXML) papers, inline `<math>` blocks embed `<annotation encoding="application/x-tex">` hidden via CSS `display:none` without a `[hidden]` attribute, which splices raw TeX into the normalized text index.
+`ef_notes.js` (lines 37 to 67 on `epistemic.fund/notes.js`) builds its DOM text index with `TreeWalker(NodeFilter.SHOW_TEXT)` and skips only `script, style, [hidden], .cnd-card, .checks`. On `arxiv.org/html` (LaTeXML) papers, inline `<math>` blocks embed `<annotation encoding="application/x-tex">` hidden via CSS `display:none` without a `[hidden]` attribute, which splices raw TeX into the normalized text index.
 
-Across all 60 reachable HTML papers from the 80 newest November 2026 `export.arxiv.org` submissions (`cs.HC`, `cs.CY`, `stat.AP`, `q-bio.QM`), 49 contain inline `<math>` and unpatched `ef_notes.js` returns `None` on both exact and 6-word `1.5x` fallback matching in 45 of them (91.8%, breaking 2,621 of 8,472 sentences in math paragraphs). Stripping `<annotation>` and `<annotation-xml>` restores all 2,621 sentence spans. In `arXiv:2611.32266v1`, the checker flags `kappa_G = 0.400` mislabeled "moderate" in `#S5.SS4.p3.1` and `#S5.SS6.p1.1` even though the same paper labels `kappa_G = 0.389` "fair" in `#S5.SS6.p4.1` under Landis & Koch (1977) `[0.21, 0.40]`.
+Across all 60 reachable HTML papers from the 80 newest November 2026 `export.arxiv.org` submissions (`cs.HC`, `cs.CY`, `stat.AP`, `q-bio.QM`; per-paper `<p>` prose telemetry in `paper_telemetry_60.json`), 49 contain inline `<math>` inside `<p>` prose paragraphs (1 additional paper, `2611.31176v1`, has inline `<math>` only in table cells and a table caption) and unpatched `ef_notes.js` fails on both exact and 6-word `1.5x` fallback matching in 45 of those 49 papers (91.8%). Isolating `<annotation>` pollution at the Unicode code-point level (`preprint_note_check.py`) breaks 2,621 of 8,472 sentences in `<p>` math paragraphs, and stripping `<annotation>` and `<annotation-xml>` restores all 2,621 sentence spans; in browser JavaScript, `ef_notes.js` (lines 47 to 51) also splits non-BMP math symbols such as `U+1D49F` via UTF-16 `raw[i]` indexing (2,730 broken sentences total), and the code-point `MathML-clean` index in `docs/index.html` restores all 2,730 (0 unrecovered). In `arXiv:2611.32266v1`, the checker flags `kappa_G = 0.400` mislabeled "moderate" in `#S5.SS4.p3.1` and `#S5.SS6.p1.1` even though the same paper labels `kappa_G = 0.389` "fair" in `#S5.SS6.p4.1` under Landis & Koch (1977) `[0.21, 0.40]`.
 
 Run with Python 3.10+ standard library (0.04s on the bundled 3-paragraph excerpt, zero third-party packages):
 
@@ -37,7 +37,7 @@ Verbatim output:
 
 ## CLI Modes and Bundled Files
 
-1. `python3 preprint_note_check.py --html path/to/paper.html [--quote "..."]` strips MathML source annotations for DOM quote anchoring and checks Landis & Koch kappa intervals, exact one-tailed or two-tailed Student-t `p`-values via regularized incomplete beta, `k/N` ratios, and GRIM integer means. `fixtures/arxiv_2611_32266v1_sample.html` holds verbatim paragraphs `#S5.SS4.p3.1`, `#S5.SS6.p1.1`, and `#S5.SS6.p4.1` from `https://arxiv.org/html/2611.32266v1`; `fixtures/synthetic_stat_units.html` is an isolated synthetic unit-test fixture (`candidate_notes=[]`).
+1. `python3 preprint_note_check.py --html path/to/paper.html [--quote "..."]` strips MathML source annotations for DOM quote anchoring and checks Landis & Koch kappa intervals, exact one-tailed or two-tailed Student-t `p`-values via regularized incomplete beta, `k/N` ratios, and GRIM integer means. `fixtures/arxiv_2611_32266v1_sample.html` holds verbatim paragraphs `#S5.SS4.p3.1` and `#S5.SS6.p1.1` plus the opening two-sentence kappa excerpt of `#S5.SS6.p4.1` from `https://arxiv.org/html/2611.32266v1`; `fixtures/synthetic_stat_units.html` is an isolated synthetic unit-test fixture (`candidate_notes=[]`). `paper_telemetry_60.json` lists per-paper counts across all 60 reachable HTML preprints.
 2. `python3 preprint_note_check.py --html path/to/paper.html --json` outputs paper-specific `candidate_notes` (`everything_item`, `everything_claim`, `everything_note` drafts) along with `model_completed` and `exception_type`.
 3. `stickiness_summary.json` records observational retention computed from X's public 2026-11-24 `noteStatusHistory` archive (`https://ton.twimg.com/birdwatch-public-data/2026/11/24/noteStatusHistory/noteStatusHistory-00000.zip`, SHA256 `72aa7ef8e2fdb406697b7e9073b69f9f6ec8b3160ead4ae003515688808b5517`, 3,561,162 notes).
 
