@@ -1,0 +1,40 @@
+{
+  "dataset": "X Official Community Notes noteStatusHistory public snapshot",
+  "snapshot_date_utc": "2026-11-24",
+  "source_url": "https://ton.twimg.com/birdwatch-public-data/2026/11/24/noteStatusHistory/noteStatusHistory-00000.zip",
+  "zip_sha256": "72aa7ef8e2fdb406697b7e9073b69f9f6ec8b3160ead4ae003515688808b5517",
+  "platform_wide": {
+    "total_notes": 3561162,
+    "first_non_nmr_crh_notes": 387673,
+    "median_hours_to_first_crh": 7.524,
+    "still_crh_notes": 298376,
+    "still_crh_rate": 0.7697,
+    "reverted_to_nmr_notes": 89269,
+    "reverted_to_nmr_rate": 0.2303,
+    "reverted_to_crnh_notes": 28,
+    "locked_crh_notes": 278479,
+    "stickiness_by_time_to_first_crh": [
+      {"bucket": "<2h", "n": 34152, "still_crh_notes": 28777, "still_crh_rate": 0.8426, "reverted_to_nmr_notes": 5370, "reverted_to_nmr_rate": 0.1572},
+      {"bucket": "2h_to_6h", "n": 129096, "still_crh_notes": 105638, "still_crh_rate": 0.8183, "reverted_to_nmr_notes": 23449, "reverted_to_nmr_rate": 0.1816},
+      {"bucket": "6h_to_15h", "n": 113038, "still_crh_notes": 87934, "still_crh_rate": 0.7779, "reverted_to_nmr_notes": 25096, "reverted_to_nmr_rate": 0.2220},
+      {"bucket": ">15h", "n": 111387, "still_crh_notes": 76027, "still_crh_rate": 0.6825, "reverted_to_nmr_notes": 35354, "reverted_to_nmr_rate": 0.3174}
+    ]
+  },
+  "goodheart_public_dashboard_crossjoin": {
+    "dashboard_snapshot_utc": "2026-11-25T00:04:55Z",
+    "submitted_notes": 12186,
+    "matched_in_x_history": 11438,
+    "first_non_nmr_crh_notes": 1506,
+    "median_hours_to_first_crh": 9.55,
+    "still_crh_notes": 1297,
+    "still_crh_rate": 0.8612,
+    "reverted_to_nmr_notes": 209,
+    "reverted_to_nmr_rate": 0.1388,
+    "rated_crnh_notes": 343,
+    "top_crnh_reason_note_counts": {
+      "notHelpfulMissingKeyPoints": 340,
+      "notHelpfulNoteNotNeeded": 337,
+      "notHelpfulIncorrect": 321
+    }
+  }
+}
